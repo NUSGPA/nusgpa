@@ -162,14 +162,14 @@ if not st.session_state.courses.empty:
         data=csv_data,
         file_name="myNUSGPA.csv", 
         mime="text/csv", 
-        use_container_width=True
+        width='stretch'
     )
     st.sidebar.info("Download your CSV to save your progress for next time!")
 else:
-    st.sidebar.download_button("📥 Download CSV", data="", disabled=True, use_container_width=True)
+    st.sidebar.download_button("📥 Download CSV", data="", disabled=True, width='stretch')
 
 # 3. System Reset Control
-if st.sidebar.button("⚠️ Reset All", on_click=reset_app_callback, type="primary", use_container_width=True): pass
+if st.sidebar.button("⚠️ Reset All", on_click=reset_app_callback, type="primary", width='stretch'): pass
 
 st.sidebar.markdown("---")
 
@@ -197,7 +197,7 @@ with st.sidebar.expander("Add New Course", expanded=True):
     with c3: st.selectbox("Grade", options=list(grade_map.keys()), key="grade_input", label_visibility="collapsed")
     with c4: st.checkbox("Exercise S/U?", key="su_input")
     
-    st.button("Add", on_click=add_course_callback, use_container_width=True)
+    st.button("Add", on_click=add_course_callback, width='stretch')
 
 st.sidebar.markdown("---")
 st.sidebar.caption("Data provided by [NUSMods](https://nusmods.com). Not affiliated with NUS.")
@@ -220,8 +220,9 @@ with col_left:
             "Credits": st.column_config.NumberColumn("Credits", format="%.1f"),
             "Semester": st.column_config.NumberColumn("Semester", help="1=Y1S1, 2=Y1S2, etc.", step=1)
         },
-        use_container_width=True,
-        key="editor" 
+        width='stretch',
+        key="editor",
+        height=300
     )
 
 if not edited_df.equals(st.session_state.courses):
