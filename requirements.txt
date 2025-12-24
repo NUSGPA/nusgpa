@@ -1,8 +1,4 @@
 streamlit
 pandas
-altair
 requests
-os
-json
-time
-datetime
+altair
