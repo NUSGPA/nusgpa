@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
-import os
 import data_manager as dm 
 
 # --- SECTION 1: APP CONFIGURATION ---
@@ -226,6 +225,3 @@ if not st.session_state.courses.empty:
 else:
     st.info("**Welcome!** Start by adding your modules using the sidebar on the left.")
 
-import os
-st.write("Current Directory:", os.getcwd())
-st.write("Files in folder:", os.listdir())
