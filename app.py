@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
-import data_manager as dm 
+import data_manager as dm
 
 # --- SECTION 1: APP CONFIGURATION ---
 st.set_page_config(page_title="NUSGPA Calculator", layout="wide")
@@ -13,8 +13,9 @@ grade_map = {
     "CS": 0.0, "CU": 0.0, "IP": 0.0 
 }
 sem_mapping = {
-    "Y1 S1": 1, "Y1 S2": 2, "Y2 S1": 3, "Y2 S2": 4, "Y3 S1": 5, "Y3 S2": 6,
-    "Y4 S1": 7, "Y4 S2": 8, "Y5 S1": 9, "Y5 S2": 10, "Y6 S1": 11, "Y6 S2": 12,
+    "Y1 S1": 1, "Y1 S2": 2, "Y2 S1": 3, "Y2 S2": 4,
+    "Y3 S1": 5, "Y3 S2": 6, "Y4 S1": 7, "Y4 S2": 8,
+    "Y5 S1": 9, "Y5 S2": 10, "Y6 S1": 11, "Y6 S2": 12,
     "Special Term": 99
 }
 
@@ -32,9 +33,8 @@ for key, default in keys_defaults.items():
 
 # --- SECTION 3: CALLBACKS ---
 def on_module_select():
-    # Fetch current AY choice from session state
     current_ay = st.session_state.get("ay_selector", dm.get_current_acad_year())
-    df_lookup = dm.get_modules_for_ay(current_ay) # Ask data_manager for data
+    df_lookup = dm.get_modules_for_ay(current_ay)
     
     selection = st.session_state.search_selection
     if selection and not df_lookup.empty:
@@ -72,7 +72,6 @@ def reset_app_callback():
 # --- SECTION 4: SIDEBAR ---
 st.sidebar.header("Data & Actions")
 
-# File Upload
 unique_key = f"uploader_{st.session_state.uploader_id}"
 uploaded_file = st.sidebar.file_uploader("Load CSV", type=["csv"], key=unique_key, label_visibility="collapsed")
 if uploaded_file is None: st.sidebar.caption("📂 Load History (CSV)")
@@ -82,7 +81,8 @@ if uploaded_file:
     if "last_loaded_hash" not in st.session_state or st.session_state.last_loaded_hash != f_hash:
         try:
             df_up = pd.read_csv(uploaded_file)
-            if {"Course", "Semester", "Grade", "Credits", "SU_Opt_Out"}.issubset(df_up.columns):
+            required_cols = {"Course", "Semester", "Grade", "Credits", "SU_Opt_Out"}
+            if required_cols.issubset(df_up.columns):
                 if "SU_Opt_Out" in df_up.columns: df_up["SU_Opt_Out"] = df_up["SU_Opt_Out"].astype(bool)
                 st.session_state.courses = df_up
                 st.session_state.last_loaded_hash = f_hash
@@ -90,30 +90,28 @@ if uploaded_file:
             else: st.error("❌ Invalid CSV columns")
         except Exception as e: st.error(f"Error: {e}")
 
-# Export & Reset
 if not st.session_state.courses.empty:
-    st.sidebar.download_button("📥 Download CSV", st.session_state.courses.to_csv(index=False).encode('utf-8'), "myNUSGPA.csv", "text/csv", width='stretch')
+    st.sidebar.download_button(
+        "📥 Download CSV", 
+        st.session_state.courses.to_csv(index=False).encode('utf-8'), 
+        "myNUSGPA.csv", 
+        "text/csv", 
+        use_container_width=True
+    )
 else:
-    st.sidebar.download_button("📥 Download CSV", "", disabled=True, width='stretch')
+    st.sidebar.download_button("📥 Download CSV", "", disabled=True, use_container_width=True)
 
-if st.sidebar.button("⚠️ Reset All", on_click=reset_app_callback, type="primary", width='stretch'): pass
+if st.sidebar.button("⚠️ Reset All", on_click=reset_app_callback, type="primary", use_container_width=True): pass
 
 st.sidebar.markdown("---")
 
-# Add Course Form
 with st.sidebar.expander("Add New Course", expanded=True):
-    # 1. Ask data_manager for Year Options
     ay_list, default_ay = dm.get_ay_options()
-    
-    # 2. Trigger the "ETL" process to ensure files exist
     dm.ensure_all_years_cached(ay_list)
-    
-    # 3. Dropdown for Year Selection
     try: idx = ay_list.index(default_ay)
     except: idx = 0
     sel_ay = st.selectbox("AY Source", ay_list, index=idx, key="ay_selector", label_visibility="collapsed")
     
-    # 4. Fetch specific year data for Search
     modules_df = dm.get_modules_for_ay(sel_ay)
     opts = modules_df["display_label"].tolist() if not modules_df.empty else []
 
@@ -131,7 +129,7 @@ with st.sidebar.expander("Add New Course", expanded=True):
     with c3: st.selectbox("Grade", list(grade_map.keys()), key="grade_input", label_visibility="collapsed")
     with c4: st.checkbox("Exercise S/U?", key="su_input")
     
-    st.button("Add", on_click=add_course_callback, width='stretch')
+    st.button("Add", on_click=add_course_callback, use_container_width=True)
 
 st.sidebar.markdown("---")
 st.sidebar.caption("Data provided by [NUSMods](https://nusmods.com).")
@@ -142,17 +140,28 @@ col_L, _, col_R = st.columns([1, 0.1, 0.4], vertical_alignment="top")
 
 with col_L:
     st.subheader("Course Record")
-    edited = st.data_editor(
-        st.session_state.courses, num_rows="dynamic",
+    
+    # We capture the edited dataframe
+    edited_df = st.data_editor(
+        st.session_state.courses,
+        num_rows="dynamic",
         column_config={
             "SU_Opt_Out": st.column_config.CheckboxColumn("SU Option", default=False),
             "Grade": st.column_config.SelectboxColumn("Grade", options=list(grade_map.keys()), required=True),
             "Credits": st.column_config.NumberColumn("Credits", format="%.1f"),
             "Semester": st.column_config.NumberColumn("Semester", help="1=Y1S1, 2=Y1S2...", step=1)
         },
-        width='stretch', key="editor", height=300
+        use_container_width=True,
+        key="editor",
+        height=300
     )
-    if not edited.equals(st.session_state.courses): st.session_state.courses = edited
+    
+    # [FIX] Immediate Update Logic
+    # 1. Check if the table differs from session state
+    if not edited_df.equals(st.session_state.courses):
+        # 2. Update session state
+        st.session_state.courses = edited_df
+        st.rerun()
 
 # --- SECTION 6: ANALYTICS ---
 if not st.session_state.courses.empty:
@@ -206,10 +215,10 @@ if not st.session_state.courses.empty:
     c1, _, c2, _, c3 = st.columns([1, 0.1, 1, 0.1, 1], vertical_alignment="top")
     with c1:
         st.subheader("Performance")
-        st.dataframe(disp_sum, width='stretch', hide_index=True, height=250)
+        st.dataframe(disp_sum, use_container_width=True, hide_index=True, height=250)
     with c2:
         st.subheader("Grade Dist.")
-        st.altair_chart(d_chart, width='stretch')
+        st.altair_chart(d_chart, use_container_width=True)
     with c3:
         st.subheader("Trend")
         t_data = disp_sum.copy()
@@ -220,8 +229,7 @@ if not st.session_state.courses.empty:
         bar = base.mark_bar(opacity=0.7, color='#60b4ff', cornerRadiusTopLeft=5, cornerRadiusTopRight=5).encode(
             y=alt.Y('Sem GPA', scale=alt.Scale(domain=[0,5]), title="GPA"), tooltip=['Sem Label', 'Sem GPA', 'Mods'])
         line = base.mark_line(color="#ff0000", point=True).encode(y='Cumulative GPA', tooltip=['Sem Label', 'Cumulative GPA'])
-        st.altair_chart((bar+line).properties(height=250), width='stretch')
+        st.altair_chart((bar+line).properties(height=250), use_container_width=True)
 
 else:
     st.info("**Welcome!** Start by adding your modules using the sidebar on the left.")
-
